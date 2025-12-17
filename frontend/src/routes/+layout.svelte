@@ -9,7 +9,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>File Converter</title>
+	<title>Zenfile</title>
 </svelte:head>
 
 <ModeWatcher />

@@ -19,7 +19,7 @@
 	}
 </script>
 
-<header class="border-b bg-card">
+<header class="border-b bg-card pt-4">
 	<div class="container flex h-14 items-center justify-between px-4">
 		<div class="flex items-center gap-3">
 			<h1 class="text-xl font-bold">File Converter</h1>
