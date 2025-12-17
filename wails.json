@@ -1,0 +1,14 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "wailsjsdir": "./frontend/src/lib",
+  "name": "wails-sveltekit-ts-tw-template",
+  "outputfilename": "wails-sveltekit-ts-tw-template",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "gustaavik",
+    "email": "wailstemplate@zenfulcode.com"
+  }
+}
