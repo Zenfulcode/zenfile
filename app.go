@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -115,22 +116,12 @@ func (a *App) shutdown(ctx context.Context) {
 func (a *App) SelectFiles() ([]models.FileInfo, error) {
 	a.log.Debug("app", "Opening file selection dialog")
 
+	// Build file filters dynamically based on supported formats
+	filters := a.buildFileFilters()
+
 	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Files to Convert",
-		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "Video Files",
-				Pattern:     "*.mp4;*.webm;*.avi;*.mkv;*.mov;*.wmv;*.flv;*.m4v;*.mpeg;*.mpg;*.3gp;*.mts;*.m2ts;*.ts;*.vob;*.ogv;*.rm;*.rmvb;*.asf;*.divx;*.f4v",
-			},
-			{
-				DisplayName: "Image Files",
-				Pattern:     "*.png;*.jpg;*.jpeg;*.webp;*.gif;*.bmp;*.tiff;*.tif",
-			},
-			{
-				DisplayName: "All Supported Files",
-				Pattern:     "*.mp4;*.webm;*.avi;*.mkv;*.mov;*.wmv;*.flv;*.m4v;*.mpeg;*.mpg;*.3gp;*.mts;*.m2ts;*.ts;*.vob;*.ogv;*.rm;*.rmvb;*.asf;*.divx;*.f4v;*.png;*.jpg;*.jpeg;*.webp;*.gif;*.bmp;*.tiff;*.tif",
-			},
-		},
+		Title:   "Select Files to Convert",
+		Filters: filters,
 	})
 
 	if err != nil {
@@ -152,6 +143,61 @@ func (a *App) SelectFiles() ([]models.FileInfo, error) {
 
 	a.log.Info("app", "Selected %d valid files", len(validFiles))
 	return validFiles, nil
+}
+
+// buildFileFilters creates file filters based on supported formats from the formatProvider
+func (a *App) buildFileFilters() []runtime.FileFilter {
+	videoFormats := a.formatProvider.GetSupportedVideoInputFormats()
+	imageFormats := a.formatProvider.GetSupportedImageInputFormats()
+
+	// Build pattern strings (e.g., "*.mp4;*.mov;*.m4v")
+	videoPattern := buildPatternFromFormats(videoFormats)
+	imagePattern := buildPatternFromFormats(imageFormats)
+
+	var filters []runtime.FileFilter
+
+	if videoPattern != "" {
+		filters = append(filters, runtime.FileFilter{
+			DisplayName: "Video Files",
+			Pattern:     videoPattern,
+		})
+	}
+
+	if imagePattern != "" {
+		filters = append(filters, runtime.FileFilter{
+			DisplayName: "Image Files",
+			Pattern:     imagePattern,
+		})
+	}
+
+	// Add "All Supported Files" option if we have formats
+	if videoPattern != "" || imagePattern != "" {
+		allPatterns := videoPattern
+		if allPatterns != "" && imagePattern != "" {
+			allPatterns += ";" + imagePattern
+		} else if imagePattern != "" {
+			allPatterns = imagePattern
+		}
+		filters = append(filters, runtime.FileFilter{
+			DisplayName: "All Supported Files",
+			Pattern:     allPatterns,
+		})
+	}
+
+	return filters
+}
+
+// buildPatternFromFormats converts a slice of format strings to a file pattern
+func buildPatternFromFormats(formats []string) string {
+	if len(formats) == 0 {
+		return ""
+	}
+
+	patterns := make([]string, len(formats))
+	for i, format := range formats {
+		patterns[i] = "*." + format
+	}
+	return strings.Join(patterns, ";")
 }
 
 // SelectDirectory opens a directory selection dialog

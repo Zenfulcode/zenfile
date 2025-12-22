@@ -271,8 +271,9 @@ func (c *avfVideoConverter) getPresetForFormat(format string) string {
 
 // SupportedInputFormats returns the list of supported input video formats
 func (c *avfVideoConverter) SupportedInputFormats() []string {
-	// AVFoundation supports these input formats
-	return []string{"mp4", "mov", "m4v", "avi", "mkv", "webm", "3gp"}
+	// AVFoundation natively supports QuickTime-compatible formats
+	// Note: webm, mkv, avi are NOT supported by AVFoundation without additional plugins
+	return []string{"mp4", "mov", "m4v", "3gp"}
 }
 
 // SupportedOutputFormats returns the list of supported output formats for video

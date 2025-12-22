@@ -5,6 +5,12 @@ import "zenfile/internal/models"
 // FormatProvider defines the contract for getting supported formats
 // This follows the Interface Segregation Principle (ISP) - clients only depend on methods they use
 type FormatProvider interface {
+	// GetSupportedVideoInputFormats returns the list of supported video input formats
+	GetSupportedVideoInputFormats() []string
+
+	// GetSupportedImageInputFormats returns the list of supported image input formats
+	GetSupportedImageInputFormats() []string
+
 	// GetSupportedVideoOutputFormats returns the list of supported video output formats
 	GetSupportedVideoOutputFormats() []string
 
@@ -40,6 +46,22 @@ func NewFormatProvider(videoConverter Converter, imageConverter Converter, backe
 		imageConverter: imageConverter,
 		backendName:    backendName,
 	}
+}
+
+// GetSupportedVideoInputFormats returns the list of supported video input formats
+func (p *formatProvider) GetSupportedVideoInputFormats() []string {
+	if p.videoConverter == nil {
+		return []string{}
+	}
+	return p.videoConverter.SupportedInputFormats()
+}
+
+// GetSupportedImageInputFormats returns the list of supported image input formats
+func (p *formatProvider) GetSupportedImageInputFormats() []string {
+	if p.imageConverter == nil {
+		return []string{}
+	}
+	return p.imageConverter.SupportedInputFormats()
 }
 
 // GetSupportedVideoOutputFormats returns the list of supported video output formats

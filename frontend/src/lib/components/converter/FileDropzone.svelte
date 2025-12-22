@@ -5,16 +5,25 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { converterStore } from '$lib/stores/converter.svelte';
-	import { formatFileSize } from '$lib/types';
+	import { formatStore } from '$lib/stores/formats.svelte';
+	import { formatFileSize, type FileInfo } from '$lib/types';
 	import { SelectFiles } from '$lib/wailsjs/go/main/App';
 
 	let isDragOver = $state(false);
+
+	// Get supported formats from backend
+	let supportedFormatsText = $derived.by(() => {
+		const videoFormats = formatStore.videoFormats.map((f) => f.toUpperCase());
+		const imageFormats = formatStore.imageFormats.map((f) => f.toUpperCase());
+		const allFormats = [...videoFormats, ...imageFormats];
+		return allFormats.length > 0 ? allFormats.join(', ') : 'Loading...';
+	});
 
 	async function handleSelectFiles() {
 		try {
 			const files = await SelectFiles();
 			if (files && files.length > 0) {
-				converterStore.setFiles(files);
+				converterStore.setFiles(files as FileInfo[]);
 			}
 		} catch (err) {
 			console.error('Failed to select files:', err);
@@ -79,7 +88,7 @@
 					Click to browse or drag and drop your files here
 				</p>
 				<p class="text-xs text-muted-foreground">
-					Supported: MP4, WebM, AVI, MKV, MOV, PNG, JPG, JPEG, WebP, GIF, BMP, TIFF
+					Supported: {supportedFormatsText}
 				</p>
 			</button>
 		{:else}
@@ -109,7 +118,7 @@
 								class="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
 							>
 								<div class="flex items-center gap-3 overflow-hidden">
-									<FileIcon class="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+									<FileIcon class="h-5 w-5 shrink-0 text-muted-foreground" />
 									<div class="min-w-0">
 										<p class="truncate text-sm font-medium">{file.name}</p>
 										<p class="text-xs text-muted-foreground">
@@ -120,7 +129,7 @@
 								<Button
 									variant="ghost"
 									size="icon"
-									class="h-8 w-8 flex-shrink-0"
+									class="h-8 w-8 shrink-0"
 									onclick={() => removeFile(index)}
 								>
 									<X class="h-4 w-4" />
