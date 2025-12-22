@@ -2,7 +2,8 @@ import type {
 	FileInfo,
 	FileNamingMode,
 	ConversionProgress,
-	BatchConversionResult
+	BatchConversionResult,
+	FileType
 } from '$lib/types';
 
 // Converter store using Svelte 5 runes
@@ -31,9 +32,9 @@ class ConverterStore {
 		return this.files.length > 0;
 	}
 
-	get fileType(): string {
-		if (this.files.length === 0) return '';
-		return this.files[0].type;
+	get fileType(): FileType {
+		if (this.files.length === 0) return 'unknown';
+		return this.files[0].type as FileType;
 	}
 
 	get canConvert(): boolean {
