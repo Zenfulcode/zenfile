@@ -1,3 +1,24 @@
+export namespace main {
+	
+	export class SupportedFormatsResponse {
+	    videoFormats: string[];
+	    imageFormats: string[];
+	    backend: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SupportedFormatsResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.videoFormats = source["videoFormats"];
+	        this.imageFormats = source["imageFormats"];
+	        this.backend = source["backend"];
+	    }
+	}
+
+}
+
 export namespace models {
 	
 	export class BatchConversionRequest {

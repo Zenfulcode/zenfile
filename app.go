@@ -31,6 +31,7 @@ type App struct {
 	fileService       services.FileService
 	conversionService services.ConversionService
 	settingsService   services.SettingsService
+	formatProvider    services.FormatProvider
 }
 
 // NewApp creates a new App application struct
@@ -90,6 +91,7 @@ func (a *App) startup(ctx context.Context) {
 		log,
 	)
 	a.settingsService = services.NewSettingsService(settingsRepo, log)
+	a.formatProvider = services.NewFormatProvider(videoConverter, imageConverter, a.getConverterBackend())
 
 	log.Info("app", "Application startup complete")
 }
@@ -246,4 +248,43 @@ func (a *App) GetAppInfo() map[string]string {
 	}
 
 	return info
+}
+
+// SupportedFormatsResponse contains the supported formats for the frontend
+type SupportedFormatsResponse struct {
+	VideoFormats []string `json:"videoFormats"`
+	ImageFormats []string `json:"imageFormats"`
+	Backend      string   `json:"backend"`
+}
+
+// GetSupportedFormats returns the supported output formats for the current backend
+// This allows the frontend to dynamically show only formats that the backend supports
+func (a *App) GetSupportedFormats() SupportedFormatsResponse {
+	return SupportedFormatsResponse{
+		VideoFormats: a.formatProvider.GetSupportedVideoOutputFormats(),
+		ImageFormats: a.formatProvider.GetSupportedImageOutputFormats(),
+		Backend:      a.formatProvider.GetBackendName(),
+	}
+}
+
+// GetSupportedVideoFormats returns the supported video output formats
+func (a *App) GetSupportedVideoFormats() []string {
+	return a.formatProvider.GetSupportedVideoOutputFormats()
+}
+
+// GetSupportedImageFormats returns the supported image output formats
+func (a *App) GetSupportedImageFormats() []string {
+	return a.formatProvider.GetSupportedImageOutputFormats()
+}
+
+// CanConvert checks if conversion from input to output format is supported
+func (a *App) CanConvert(fileType string, outputFormat string) bool {
+	switch models.FileType(fileType) {
+	case models.FileTypeVideo:
+		return a.formatProvider.CanConvertVideo(outputFormat)
+	case models.FileTypeImage:
+		return a.formatProvider.CanConvertImage(outputFormat)
+	default:
+		return false
+	}
 }
