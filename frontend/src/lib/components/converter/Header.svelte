@@ -5,7 +5,10 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Badge } from '$lib/components/ui/badge';
 	import { settingsStore } from '$lib/stores/settings.svelte';
+	import { formatStore } from '$lib/stores/formats.svelte';
 	import { toggleMode, setMode, mode } from 'mode-watcher';
+
+	let backendName = $derived(formatStore.isAVFoundation() ? 'AVFoundation' : 'FFmpeg');
 
 	let showAbout = $state(false);
 
@@ -29,13 +32,13 @@
 		</div>
 
 		<div class="flex items-center gap-2">
-			<!-- FFmpeg Status -->
+			<!-- Converter Backend Status -->
 			{#if settingsStore.ffmpegAvailable}
 				<Badge variant="outline" class="bg-green-500/10 text-green-600 border-green-500/30">
-					FFmpeg Ready
+					{backendName} Ready
 				</Badge>
 			{:else}
-				<Badge variant="destructive">FFmpeg Not Found</Badge>
+				<Badge variant="destructive">{backendName} Not Found</Badge>
 			{/if}
 
 			<!-- Theme Toggle -->
