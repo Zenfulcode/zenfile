@@ -8,8 +8,8 @@ permissions:
   contents: write
 
 env:
-  GO_VERSION: '1.24'
-  NODE_VERSION: '20'
+  GO_VERSION: "1.24"
+  NODE_VERSION: "20"
 
 jobs:
   update-version:
@@ -87,122 +87,104 @@ jobs:
         run: |
           wails build -platform darwin/${{ matrix.platform.arch }} -o zenfile
 
-      - name: Create ZIP archive
+      # Code Signing
+      - name: Import Code Signing Certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          echo "$MACOS_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+      - name: Sign the app
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          # Sign all binaries and frameworks inside the app bundle
+          find build/bin/Zenfile.app -type f \( -name "*.dylib" -o -name "*.framework" -o -perm +111 \) -exec codesign --force --options runtime --sign "$MACOS_SIGNING_IDENTITY" --timestamp {} \;
+
+          # Sign the main app bundle
+          codesign --force --options runtime --sign "$MACOS_SIGNING_IDENTITY" --timestamp --deep build/bin/Zenfile.app
+
+          # Verify the signature
+          codesign --verify --deep --strict --verbose=2 build/bin/Zenfile.app
+
+      # Notarization
+      - name: Notarize the app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Create a ZIP for notarization
           cd build/bin
-          zip -r Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.zip Zenfile.app
+          ditto -c -k --keepParent Zenfile.app Zenfile-notarize.zip
+
+          # Submit for notarization
+          xcrun notarytool submit Zenfile-notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # Staple the notarization ticket to the app
+          xcrun stapler staple Zenfile.app
+
+          # Verify notarization
+          spctl --assess --type exec -vv Zenfile.app
+
+          # Clean up notarization zip
+          rm Zenfile-notarize.zip
+
+      # Create DMG with appdmg
+      - name: Install appdmg
+        run: npm install -g appdmg
+
+      - name: Create DMG
+        run: |
+          cd build/bin/darwin
+          appdmg appdmg.json Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.dmg
+
+      - name: Sign the DMG
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          codesign --force --sign "$MACOS_SIGNING_IDENTITY" --timestamp build/bin/Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.dmg
+
+      - name: Notarize the DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit build/bin/Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.dmg \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple build/bin/Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.dmg
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: Zenfile-${{ matrix.platform.name }}
-          path: build/bin/Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.zip
-
-  build-windows:
-    needs: update-version
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download updated wails.json
-        uses: actions/download-artifact@v4
-        with:
-          name: wails-config
-          path: .
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          bun install
-
-      - name: Build Windows app
-        run: |
-          wails build -platform windows/amd64 -o zenfile.exe
-
-      - name: Create ZIP archive
-        run: |
-          cd build/bin
-          Compress-Archive -Path zenfile.exe -DestinationPath Zenfile-windows-amd64-${{ needs.update-version.outputs.version }}.zip
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Zenfile-windows-amd64
-          path: build/bin/Zenfile-windows-amd64-${{ needs.update-version.outputs.version }}.zip
-
-  build-linux:
-    needs: update-version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download updated wails.json
-        uses: actions/download-artifact@v4
-        with:
-          name: wails-config
-          path: .
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
-
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          bun install
-
-      - name: Build Linux app
-        run: |
-          wails build -platform linux/amd64 -o zenfile
-
-      - name: Create archive
-        run: |
-          cd build/bin
-          tar -czvf Zenfile-linux-amd64-${{ needs.update-version.outputs.version }}.tar.gz zenfile
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Zenfile-linux-amd64
-          path: build/bin/Zenfile-linux-amd64-${{ needs.update-version.outputs.version }}.tar.gz
+          path: build/bin/Zenfile-${{ matrix.platform.name }}-${{ needs.update-version.outputs.version }}.dmg
 
   upload-release-assets:
-    needs: [update-version, build-macos, build-windows, build-linux]
+    needs: [update-version, build-macos]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
