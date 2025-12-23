@@ -9,7 +9,7 @@ export function CheckFFmpeg():Promise<boolean>;
 
 export function ConvertFiles(arg1:models.BatchConversionRequest):Promise<models.BatchConversionResult>;
 
-export function GetAppInfo():Promise<Record<string, string>>;
+export function GetAppInfo():Promise<main.AppInfoResponse>;
 
 export function GetConversionHistory(arg1:number):Promise<Array<models.Conversion>>;
 

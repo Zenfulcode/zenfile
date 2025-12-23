@@ -279,18 +279,28 @@ func (a *App) GetFFmpegVersion() (string, error) {
 	return a.getConverterVersion()
 }
 
+// AppInfoResponse contains application information for the frontend
+type AppInfoResponse struct {
+	Name             string `json:"name"`
+	Version          string `json:"version"`
+	DataDir          string `json:"dataDir"`
+	LogFile          string `json:"logFile"`
+	ConverterBackend string `json:"converterBackend"`
+	FFmpegVersion    string `json:"ffmpegVersion,omitempty"`
+}
+
 // GetAppInfo returns application information
-func (a *App) GetAppInfo() map[string]string {
-	info := map[string]string{
-		"name":             a.config.AppName,
-		"version":          a.config.Version,
-		"dataDir":          a.config.DataDir,
-		"logFile":          a.config.LogFile,
-		"converterBackend": a.getConverterBackend(),
+func (a *App) GetAppInfo() AppInfoResponse {
+	info := AppInfoResponse{
+		Name:             a.config.AppName,
+		Version:          a.config.Version,
+		DataDir:          a.config.DataDir,
+		LogFile:          a.config.LogFile,
+		ConverterBackend: a.getConverterBackend(),
 	}
 
 	if version, err := a.getConverterVersion(); err == nil {
-		info["ffmpegVersion"] = version
+		info.FFmpegVersion = version
 	}
 
 	return info

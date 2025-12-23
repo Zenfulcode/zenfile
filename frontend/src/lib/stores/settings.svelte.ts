@@ -1,4 +1,5 @@
-import type { UserSettings, AppInfo } from '$lib/types';
+import type { UserSettings } from '$lib/types';
+import type { main } from '$lib/wailsjs/go/models';
 
 // Settings store using Svelte 5 runes
 class SettingsStore {
@@ -9,7 +10,7 @@ class SettingsStore {
 		theme: 'system'
 	});
 
-	appInfo = $state<AppInfo | null>(null);
+	appInfo = $state<main.AppInfoResponse | null>(null);
 	ffmpegAvailable = $state<boolean>(false);
 	isLoading = $state<boolean>(true);
 
@@ -17,7 +18,7 @@ class SettingsStore {
 		this.settings = newSettings;
 	}
 
-	setAppInfo(info: AppInfo) {
+	setAppInfo(info: main.AppInfoResponse) {
 		this.appInfo = info;
 	}
 

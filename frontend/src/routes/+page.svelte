@@ -20,7 +20,9 @@
 	import { EventsOn } from '$lib/wailsjs/runtime/runtime';
 	import type {
 		BatchConversionRequest,
-		ConversionProgress as ConversionProgressType
+		ConversionProgress as ConversionProgressType,
+		FileNamingMode,
+		UserSettings
 	} from '$lib/types';
 
 	onMount(async () => {
@@ -36,11 +38,11 @@
 			// Load settings
 			const settings = await GetSettings();
 			if (settings) {
-				settingsStore.setSettings(settings);
+				settingsStore.setSettings(settings as UserSettings);
 				if (settings.lastOutputDirectory) {
 					converterStore.setOutputDirectory(settings.lastOutputDirectory);
 				}
-				converterStore.setNamingMode(settings.defaultNamingMode);
+				converterStore.setNamingMode(settings.defaultNamingMode as FileNamingMode);
 				converterStore.setMakeCopies(settings.defaultMakeCopies);
 			}
 

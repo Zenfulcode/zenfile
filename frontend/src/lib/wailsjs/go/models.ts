@@ -1,5 +1,27 @@
 export namespace main {
 	
+	export class AppInfoResponse {
+	    name: string;
+	    version: string;
+	    dataDir: string;
+	    logFile: string;
+	    converterBackend: string;
+	    ffmpegVersion?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppInfoResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.dataDir = source["dataDir"];
+	        this.logFile = source["logFile"];
+	        this.converterBackend = source["converterBackend"];
+	        this.ffmpegVersion = source["ffmpegVersion"];
+	    }
+	}
 	export class SupportedFormatsResponse {
 	    videoFormats: string[];
 	    imageFormats: string[];
