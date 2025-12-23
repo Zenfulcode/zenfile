@@ -99,6 +99,11 @@ jobs:
           cd frontend
           bun install
 
+      - name: Install FFmpeg build dependencies
+        if: matrix.variant.tags == 'embed_ffmpeg'
+        run: |
+          brew install nasm yasm pkg-config x264 x265 libvpx aom opus libvorbis
+
       - name: Download FFmpeg binaries for embedding
         if: matrix.variant.tags == 'embed_ffmpeg'
         run: |
@@ -189,7 +194,7 @@ jobs:
         env:
           MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
         run: |
-          codesign --force --sign "$MACOS_SIGNING_IDENTITY" --timestamp build/bin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg
+          codesign --force --sign "$MACOS_SIGNING_IDENTITY" --timestamp build/darwin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg
 
       - name: Notarize the DMG
         env:
@@ -197,19 +202,19 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcrun notarytool submit build/bin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg \
+          xcrun notarytool submit build/darwin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
 
-          xcrun stapler staple build/bin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg
+          xcrun stapler staple build/darwin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}
-          path: build/bin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg
+          path: build/darwin/Zenfile-${{ matrix.platform.name }}${{ matrix.variant.suffix }}-${{ needs.update-version.outputs.version }}.dmg
 
   upload-release-assets:
     needs: [update-version, build-macos]
