@@ -99,6 +99,12 @@ jobs:
           cd frontend
           bun install
 
+      - name: Download FFmpeg binaries for embedding
+        if: matrix.variant.tags == 'embed_ffmpeg'
+        run: |
+          chmod +x scripts/download-ffmpeg.sh
+          ./scripts/download-ffmpeg.sh darwin_${{ matrix.platform.arch }}
+
       - name: Build macOS app
         env:
           GOARCH: ${{ matrix.platform.arch }}
