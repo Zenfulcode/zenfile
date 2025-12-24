@@ -1,0 +1,222 @@
+name: TestFlight Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 1.0.0)"
+        required: true
+        type: string
+      build_number:
+        description: "Build number (auto-increments if empty)"
+        required: false
+        type: string
+
+env:
+  GO_VERSION: "1.24"
+  NODE_VERSION: "20"
+  BUNDLE_ID: "com.zenfulcode.zenfile"
+
+jobs:
+  build-and-upload:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          bun install
+
+      - name: Update version in wails.json
+        run: |
+          VERSION=${{ inputs.version }}
+          sed -i '' "s/\"productVersion\": \".*\"/\"productVersion\": \"v$VERSION\"/" wails.json
+          cat wails.json
+
+      - name: Build macOS App Store app
+        env:
+          GOARCH: arm64
+        run: |
+          wails build -platform darwin/arm64 -tags appstore -o Zenfile
+
+      - name: Import Code Signing Certificates
+        env:
+          MACOS_APPSTORE_CERTIFICATE: ${{ secrets.MACOS_APPSTORE_CERTIFICATE }}
+          MACOS_APPSTORE_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_APPSTORE_CERTIFICATE_PASSWORD }}
+          MACOS_INSTALLER_CERTIFICATE: ${{ secrets.MACOS_INSTALLER_CERTIFICATE }}
+          MACOS_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import App Store signing certificate (3rd Party Mac Developer Application)
+          echo "$MACOS_APPSTORE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/appstore_cert.p12
+          security import $RUNNER_TEMP/appstore_cert.p12 -P "$MACOS_APPSTORE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+
+          # Import Installer signing certificate (3rd Party Mac Developer Installer)
+          echo "$MACOS_INSTALLER_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/installer_cert.p12
+          security import $RUNNER_TEMP/installer_cert.p12 -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+      - name: Create Provisioning Profile directory
+        run: mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Install Provisioning Profile
+        env:
+          PROVISIONING_PROFILE: ${{ secrets.MACOS_PROVISIONING_PROFILE }}
+        run: |
+          echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/zenfile.provisionprofile
+
+      - name: Sign the app for App Store
+        env:
+          MACOS_APPSTORE_SIGNING_IDENTITY: ${{ secrets.MACOS_APPSTORE_SIGNING_IDENTITY }}
+        run: |
+          # Sign all nested components first
+          find build/bin/Zenfile.app/Contents -type f \( -name "*.dylib" -o -name "*.so" \) -exec \
+            codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
+            --entitlements build/darwin/entitlements.plist {} \;
+
+          # Sign any frameworks
+          if [ -d "build/bin/Zenfile.app/Contents/Frameworks" ]; then
+            find build/bin/Zenfile.app/Contents/Frameworks -name "*.framework" -exec \
+              codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
+              --entitlements build/darwin/entitlements.plist {} \;
+          fi
+
+          # Sign the main executable
+          codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
+            --entitlements build/darwin/entitlements.plist \
+            build/bin/Zenfile.app/Contents/MacOS/zenfile
+
+          # Sign the entire app bundle
+          codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
+            --entitlements build/darwin/entitlements.plist \
+            build/bin/Zenfile.app
+
+          # Verify the signature
+          codesign --verify --deep --strict --verbose=2 build/bin/Zenfile.app
+
+      - name: Determine build number
+        id: build-number
+        run: |
+          if [ -n "${{ inputs.build_number }}" ]; then
+            echo "build_number=${{ inputs.build_number }}" >> $GITHUB_OUTPUT
+          else
+            # Use timestamp-based build number
+            echo "build_number=$(date +%Y%m%d%H%M)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Info.plist with build number
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.build-number.outputs.build_number }}" build/bin/Zenfile.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ inputs.version }}" build/bin/Zenfile.app/Contents/Info.plist
+
+          # Verify the changes
+          echo "Updated Info.plist:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" build/bin/Zenfile.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" build/bin/Zenfile.app/Contents/Info.plist
+
+      - name: Re-sign after Info.plist update
+        env:
+          MACOS_APPSTORE_SIGNING_IDENTITY: ${{ secrets.MACOS_APPSTORE_SIGNING_IDENTITY }}
+        run: |
+          codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
+            --entitlements build/darwin/entitlements.plist \
+            build/bin/Zenfile.app
+
+      - name: Create App Store package (pkg)
+        env:
+          MACOS_INSTALLER_SIGNING_IDENTITY: ${{ secrets.MACOS_INSTALLER_SIGNING_IDENTITY }}
+        run: |
+          VERSION=${{ inputs.version }}
+          BUILD=${{ steps.build-number.outputs.build_number }}
+
+          # Create a signed pkg for App Store submission
+          productbuild --component build/bin/Zenfile.app /Applications \
+            --sign "$MACOS_INSTALLER_SIGNING_IDENTITY" \
+            "Zenfile-${VERSION}-${BUILD}.pkg"
+
+          echo "Created package: Zenfile-${VERSION}-${BUILD}.pkg"
+          ls -la *.pkg
+
+      - name: Validate package
+        run: |
+          VERSION=${{ inputs.version }}
+          BUILD=${{ steps.build-number.outputs.build_number }}
+
+          xcrun altool --validate-app \
+            --file "Zenfile-${VERSION}-${BUILD}.pkg" \
+            --type macos \
+            --apiKey "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}"
+
+      - name: Setup App Store Connect API Key
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APP_STORE_CONNECT_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          VERSION=${{ inputs.version }}
+          BUILD=${{ steps.build-number.outputs.build_number }}
+
+          echo "Uploading Zenfile-${VERSION}-${BUILD}.pkg to TestFlight..."
+
+          xcrun altool --upload-app \
+            --type macos \
+            --file "Zenfile-${VERSION}-${BUILD}.pkg" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
+
+          echo "✅ Successfully uploaded to TestFlight!"
+          echo "The build will appear in App Store Connect within a few minutes."
+
+      - name: Upload package as artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: Zenfile-appstore-${{ inputs.version }}-${{ steps.build-number.outputs.build_number }}
+          path: "*.pkg"
+
+      - name: Summary
+        run: |
+          echo "## TestFlight Upload Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ inputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Number | ${{ steps.build-number.outputs.build_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bundle ID | ${{ env.BUNDLE_ID }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The build should appear in [App Store Connect](https://appstoreconnect.apple.com) within a few minutes." >> $GITHUB_STEP_SUMMARY
