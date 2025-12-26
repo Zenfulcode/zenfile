@@ -101,8 +101,8 @@ import (
 	"time"
 	"unsafe"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
+	"converzen/internal/logger"
+	"converzen/internal/models"
 )
 
 // Callback registry for progress updates

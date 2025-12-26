@@ -1,4 +1,4 @@
-# Zenfile
+# Converzen
 
 A cross-platform file converter for video and image files, built with [Wails](https://wails.io/), SvelteKit, and Go.
 
@@ -12,7 +12,7 @@ A cross-platform file converter for video and image files, built with [Wails](ht
 
 ## Building
 
-Zenfile supports multiple build configurations for different distribution channels.
+Converzen supports multiple build configurations for different distribution channels.
 
 ### Prerequisites
 

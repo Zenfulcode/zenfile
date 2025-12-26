@@ -1,21 +1,21 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
   "wailsjsdir": "./frontend/src/lib",
-  "name": "Zenfile",
-  "outputfilename": "zenfile",
+  "name": "Converzen",
+  "outputfilename": "converzen",
   "frontend:install": "bun install",
   "frontend:build": "bun run build",
   "frontend:dev:watcher": "bun run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "gustaavik",
-    "email": "zenfile@zenfulcode.com"
+    "email": "converzen@zenfulcode.com"
   },
   "info": {
     "companyName": "Zenfulcode",
-    "productName": "Zenfile",
+    "productName": "Converzen",
     "productVersion": "v1.0.0",
     "copyright": "Copyright (C) 2025 Zenfulcode",
-    "comments": "Open Source image and video converter (github.com/zenfulcode/zenfile)"
+    "comments": "Open Source image and video converter (github.com/zenfulcode/converzen)"
   }
 }

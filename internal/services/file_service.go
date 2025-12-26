@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
+	"converzen/internal/logger"
+	"converzen/internal/models"
 )
 
 // fileServiceImpl implements FileService

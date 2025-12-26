@@ -38,13 +38,13 @@ func New() (*Config, error) {
 	}
 
 	return &Config{
-		AppName:     "Zenfile",
+		AppName:     "Converzen",
 		Version:     "1.0.0",
 		DataDir:     dataDir,
 		LogDir:      logDir,
 		LogFile:     filepath.Join(logDir, "app.log"),
 		DatabaseDir: dbDir,
-		DatabaseURL: filepath.Join(dbDir, "zenfile.db"),
+		DatabaseURL: filepath.Join(dbDir, "converzen.db"),
 		FFmpegPath:  findFFmpeg(dataDir),
 		Debug:       os.Getenv("DEBUG") == "true",
 	}, nil
@@ -77,5 +77,5 @@ func getDataDir() (string, error) {
 		}
 	}
 
-	return filepath.Join(baseDir, "Zenfile"), nil
+	return filepath.Join(baseDir, "Converzen"), nil
 }

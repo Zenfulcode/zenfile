@@ -15,8 +15,8 @@ import (
 	"golang.org/x/image/tiff"
 	"golang.org/x/image/webp"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
+	"converzen/internal/logger"
+	"converzen/internal/models"
 )
 
 // imageConverter handles image file conversion

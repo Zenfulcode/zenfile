@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"zenfile/internal/logger"
+	"converzen/internal/logger"
 )
 
 // FFmpeg wraps FFmpeg command execution

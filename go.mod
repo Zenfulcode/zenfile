@@ -1,4 +1,4 @@
-module zenfile
+module converzen
 
 go 1.24.0
 

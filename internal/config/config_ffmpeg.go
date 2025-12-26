@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"zenfile/pkg/ffmpeg"
+	"converzen/pkg/ffmpeg"
 )
 
 // findFFmpeg attempts to find the FFmpeg executable

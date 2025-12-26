@@ -3,9 +3,9 @@
 package main
 
 import (
-	"zenfile/internal/logger"
-	"zenfile/internal/services"
-	"zenfile/pkg/ffmpeg"
+	"converzen/internal/logger"
+	"converzen/internal/services"
+	"converzen/pkg/ffmpeg"
 )
 
 // ffmpegInstance holds the FFmpeg instance for non-App Store builds

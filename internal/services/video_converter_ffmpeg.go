@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
-	"zenfile/pkg/ffmpeg"
+	"converzen/internal/logger"
+	"converzen/internal/models"
+	"converzen/pkg/ffmpeg"
 )
 
 // ffmpegVideoConverter handles video file conversion using FFmpeg

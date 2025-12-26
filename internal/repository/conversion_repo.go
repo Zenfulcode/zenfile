@@ -6,8 +6,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
+	"converzen/internal/logger"
+	"converzen/internal/models"
 )
 
 // conversionRepoImpl implements ConversionRepository

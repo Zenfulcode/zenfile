@@ -1,6 +1,6 @@
 package services
 
-import "zenfile/internal/models"
+import "converzen/internal/models"
 
 // FormatProvider defines the contract for getting supported formats
 // This follows the Interface Segregation Principle (ISP) - clients only depend on methods they use

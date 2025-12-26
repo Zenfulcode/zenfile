@@ -15,7 +15,7 @@ on:
 env:
   GO_VERSION: "1.24"
   NODE_VERSION: "20"
-  BUNDLE_ID: "com.zenfulcode.zenfile"
+  BUNDLE_ID: "com.zenfulcode.converzen"
 
 jobs:
   build-and-upload:
@@ -55,7 +55,7 @@ jobs:
         env:
           GOARCH: arm64
         run: |
-          wails build -platform darwin/arm64 -tags appstore -o Zenfile
+          wails build -platform darwin/arm64 -tags appstore -o Converzen
 
       - name: Import Code Signing Certificates
         env:
@@ -91,20 +91,20 @@ jobs:
         env:
           PROVISIONING_PROFILE: ${{ secrets.MACOS_PROVISIONING_PROFILE }}
         run: |
-          echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/zenfile.provisionprofile
+          echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/converzen.provisionprofile
 
       - name: Sign the app for App Store
         env:
           MACOS_APPSTORE_SIGNING_IDENTITY: ${{ secrets.MACOS_APPSTORE_SIGNING_IDENTITY }}
         run: |
           # Sign all nested components first
-          find build/bin/Zenfile.app/Contents -type f \( -name "*.dylib" -o -name "*.so" \) -exec \
+          find build/bin/Converzen.app/Contents -type f \( -name "*.dylib" -o -name "*.so" \) -exec \
             codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
             --entitlements build/darwin/entitlements.plist {} \;
 
           # Sign any frameworks
-          if [ -d "build/bin/Zenfile.app/Contents/Frameworks" ]; then
-            find build/bin/Zenfile.app/Contents/Frameworks -name "*.framework" -exec \
+          if [ -d "build/bin/Converzen.app/Contents/Frameworks" ]; then
+            find build/bin/Converzen.app/Contents/Frameworks -name "*.framework" -exec \
               codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
               --entitlements build/darwin/entitlements.plist {} \;
           fi
@@ -112,15 +112,15 @@ jobs:
           # Sign the main executable
           codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
             --entitlements build/darwin/entitlements.plist \
-            build/bin/Zenfile.app/Contents/MacOS/zenfile
+            build/bin/Converzen.app/Contents/MacOS/converzen
 
           # Sign the entire app bundle
           codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
             --entitlements build/darwin/entitlements.plist \
-            build/bin/Zenfile.app
+            build/bin/Converzen.app
 
           # Verify the signature
-          codesign --verify --deep --strict --verbose=2 build/bin/Zenfile.app
+          codesign --verify --deep --strict --verbose=2 build/bin/Converzen.app
 
       - name: Determine build number
         id: build-number
@@ -134,13 +134,13 @@ jobs:
 
       - name: Update Info.plist with build number
         run: |
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.build-number.outputs.build_number }}" build/bin/Zenfile.app/Contents/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ inputs.version }}" build/bin/Zenfile.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.build-number.outputs.build_number }}" build/bin/Converzen.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ inputs.version }}" build/bin/Converzen.app/Contents/Info.plist
 
           # Verify the changes
           echo "Updated Info.plist:"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" build/bin/Zenfile.app/Contents/Info.plist
-          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" build/bin/Zenfile.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" build/bin/Converzen.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" build/bin/Converzen.app/Contents/Info.plist
 
       - name: Re-sign after Info.plist update
         env:
@@ -148,7 +148,7 @@ jobs:
         run: |
           codesign --force --sign "$MACOS_APPSTORE_SIGNING_IDENTITY" \
             --entitlements build/darwin/entitlements.plist \
-            build/bin/Zenfile.app
+            build/bin/Converzen.app
 
       - name: Create App Store package (pkg)
         env:
@@ -158,11 +158,11 @@ jobs:
           BUILD=${{ steps.build-number.outputs.build_number }}
 
           # Create a signed pkg for App Store submission
-          productbuild --component build/bin/Zenfile.app /Applications \
+          productbuild --component build/bin/Converzen.app /Applications \
             --sign "$MACOS_INSTALLER_SIGNING_IDENTITY" \
-            "Zenfile-${VERSION}-${BUILD}.pkg"
+            "Converzen-${VERSION}-${BUILD}.pkg"
 
-          echo "Created package: Zenfile-${VERSION}-${BUILD}.pkg"
+          echo "Created package: Converzen-${VERSION}-${BUILD}.pkg"
           ls -la *.pkg
 
       - name: Validate package
@@ -171,7 +171,7 @@ jobs:
           BUILD=${{ steps.build-number.outputs.build_number }}
 
           xcrun altool --validate-app \
-            --file "Zenfile-${VERSION}-${BUILD}.pkg" \
+            --file "Converzen-${VERSION}-${BUILD}.pkg" \
             --type macos \
             --apiKey "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
             --apiIssuer "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}"
@@ -192,11 +192,11 @@ jobs:
           VERSION=${{ inputs.version }}
           BUILD=${{ steps.build-number.outputs.build_number }}
 
-          echo "Uploading Zenfile-${VERSION}-${BUILD}.pkg to TestFlight..."
+          echo "Uploading Converzen-${VERSION}-${BUILD}.pkg to TestFlight..."
 
           xcrun altool --upload-app \
             --type macos \
-            --file "Zenfile-${VERSION}-${BUILD}.pkg" \
+            --file "Converzen-${VERSION}-${BUILD}.pkg" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
             --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
 
@@ -206,7 +206,7 @@ jobs:
       - name: Upload package as artifact
         uses: actions/upload-artifact@v6
         with:
-          name: Zenfile-appstore-${{ inputs.version }}-${{ steps.build-number.outputs.build_number }}
+          name: Converzen-appstore-${{ inputs.version }}-${{ steps.build-number.outputs.build_number }}
           path: "*.pkg"
 
       - name: Summary

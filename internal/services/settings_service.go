@@ -3,9 +3,9 @@ package services
 import (
 	"strconv"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
-	"zenfile/internal/repository"
+	"converzen/internal/logger"
+	"converzen/internal/models"
+	"converzen/internal/repository"
 )
 
 // settingsServiceImpl implements SettingsService

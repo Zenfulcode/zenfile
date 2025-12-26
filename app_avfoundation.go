@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 
-	"zenfile/internal/logger"
-	"zenfile/internal/services"
-	"zenfile/pkg/ffmpeg"
+	"converzen/internal/logger"
+	"converzen/internal/services"
+	"converzen/pkg/ffmpeg"
 )
 
 // ffmpegInstance holds the FFmpeg instance for App Store builds (when system FFmpeg is available)

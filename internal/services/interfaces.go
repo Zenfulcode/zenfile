@@ -1,7 +1,7 @@
 package services
 
 import (
-	"zenfile/internal/models"
+	"converzen/internal/models"
 )
 
 // FileService handles file operations

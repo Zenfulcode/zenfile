@@ -7,12 +7,12 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"zenfile/internal/config"
-	"zenfile/internal/database"
-	"zenfile/internal/logger"
-	"zenfile/internal/models"
-	"zenfile/internal/repository"
-	"zenfile/internal/services"
+	"converzen/internal/config"
+	"converzen/internal/database"
+	"converzen/internal/logger"
+	"converzen/internal/models"
+	"converzen/internal/repository"
+	"converzen/internal/services"
 )
 
 // App struct holds the application state and dependencies

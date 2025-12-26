@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"zenfile/internal/models"
+	"converzen/internal/models"
 )
 
 // ConversionRepository handles conversion history persistence
