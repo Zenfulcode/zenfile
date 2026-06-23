@@ -42,24 +42,24 @@ func (c *videoConverter) Convert(job models.ConversionJob, progressCallback func
 	// Validate input file exists
 	if _, err := os.Stat(job.InputPath); os.IsNotExist(err) {
 		result.ErrorMessage = fmt.Sprintf("Input file not found: %s", job.InputPath)
-		c.log.Error(result.ErrorMessage)
-		return result, fmt.Errorf(result.ErrorMessage)
+		c.log.Error("%s", result.ErrorMessage)
+		return result, fmt.Errorf("%s", result.ErrorMessage)
 	}
 
 	// Check output directory exists
 	outputDir := filepath.Dir(job.OutputPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		result.ErrorMessage = fmt.Sprintf("Failed to create output directory: %v", err)
-		c.log.Error(result.ErrorMessage)
-		return result, fmt.Errorf(result.ErrorMessage)
+		c.log.Error("%s", result.ErrorMessage)
+		return result, fmt.Errorf("%s", result.ErrorMessage)
 	}
 
 	// Check if output file already exists
 	if !job.OverwriteOutput {
 		if _, err := os.Stat(job.OutputPath); err == nil {
 			result.ErrorMessage = fmt.Sprintf("Output file already exists: %s", job.OutputPath)
-			c.log.Error(result.ErrorMessage)
-			return result, fmt.Errorf(result.ErrorMessage)
+			c.log.Error("%s", result.ErrorMessage)
+			return result, fmt.Errorf("%s", result.ErrorMessage)
 		}
 	}
 
